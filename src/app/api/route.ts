@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 
 const CHROMIUM_PATH =
-  "https://vomrghiulbmrfvmhlflk.supabase.co/storage/v1/object/public/chromium-pack/chromium-v123.0.0-pack.tar";
+  "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar";
 
 async function getBrowser() {
   if (process.env.VERCEL_ENV === "production") {
@@ -18,7 +18,7 @@ async function getBrowser() {
     const executablePath = await chromium.executablePath(CHROMIUM_PATH);
 
     const browser = await puppeteerCore.launch({
-      args: chromium.args,
+      args: [...chromium.args, "--hide-scrollbars"],
       defaultViewport: chromium.defaultViewport,
       executablePath,
       headless: chromium.headless,
@@ -33,15 +33,21 @@ async function getBrowser() {
 }
 
 export async function GET(request: NextRequest) {
+  const url = request.nextUrl.searchParams.get("url");
+  if (!url) {
+    return new NextResponse("No URL provided", { status: 400 });
+  }
+
   const browser = await getBrowser();
 
   const page = await browser.newPage();
-  await page.goto("https://example.com");
-  const pdf = await page.pdf();
+  await page.setViewport({ width: 1280, height: 720 });
+  await page.goto(url);
+  const screenshot = await page.screenshot({ type: "png" });
   await browser.close();
-  return new NextResponse(pdf, {
+  return new NextResponse(screenshot, {
     headers: {
-      "Content-Type": "application/pdf",
+      "Content-Type": "image/png",
     },
   });
 }
